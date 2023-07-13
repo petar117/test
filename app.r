@@ -1,24 +1,17 @@
-library(shinythemes)
+library(shiny)
+
+df <- mtcars
 
 ui <- fluidPage(
-  theme = shinythemes::shinytheme("darkly"),
-  headerPanel("Central limit theorem"),
-  sidebarLayout(
-    position = "right",
-    sidebarPanel(
-      numericInput("m", "Number of samples:", 2, min = 1, max = 100)
-    ),
-    mainPanel(
-      plotOutput("hist")
-    )
-  )
+  selectInput("var", NULL, choices = colnames(df)),
+  verbatimTextOutput("debug")
 )
 
 server <- function(input, output, session) {
-  output$hist <- renderPlot({
-    means <- replicate(1e4, mean(runif(input$m)))
-    hist(means, breaks = 20)
-  })
+  col_var <- reactive( df[input$var] )
+  col_range <- reactive({ range(col_var(), na.rm = TRUE ) })
+  output$debug <- renderPrint({ col_range() })
+  
 }
 
-shinyApp(ui, server)
+shinyApp(ui = ui, server = server)
