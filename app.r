@@ -1,24 +1,24 @@
-library(shiny)
-library(ggplot2)
+library(shinythemes)
 
-datasets <- c("economics", "faithfuld", "seals")
 ui <- fluidPage(
-  selectInput("dataset", "Dataset", choices = datasets),
-  verbatimTextOutput("summary"),
-  plotOutput("plot")
+  theme = shinythemes::shinytheme("darkly"),
+  headerPanel("Central limit theorem"),
+  sidebarLayout(
+    position = "right",
+    sidebarPanel(
+      numericInput("m", "Number of samples:", 2, min = 1, max = 100)
+    ),
+    mainPanel(
+      plotOutput("hist")
+    )
+  )
 )
 
 server <- function(input, output, session) {
-  dataset <- reactive({
-    get(input$dataset, "package:ggplot2")
+  output$hist <- renderPlot({
+    means <- replicate(1e4, mean(runif(input$m)))
+    hist(means, breaks = 20)
   })
-  
-  output$summary <- renderPrint({
-    summary(dataset())
-  })
-  output$plot <- renderPlot({
-    plot(dataset())
-  }, res = 96)
 }
 
 shinyApp(ui, server)
