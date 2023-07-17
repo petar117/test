@@ -1,75 +1,76 @@
-library(ggplot2)
 library(shiny)
+library(vroom)
+library(tidyverse)
 
-freqpoly <- function(x1, x2, binwidth = 0.1, xlim = c(-3, 3)) {
-  df <- data.frame(
-    x = c(x1, x2),
-    g = c(rep("x1", length(x1)), rep("x2", length(x2)))
-  )
-  
-  ggplot(df, aes(x, colour = g)) +
-    geom_freqpoly(binwidth = binwidth, size = 1) +
-    coord_cartesian(xlim = xlim)
+dir.create("neiss")
+
+download <- function(name) {
+  url <- "https://github.com/hadley/mastering-shiny/raw/main/neiss/"
+  download.file(paste0(url, name), paste0("neiss/", name), quiet = TRUE)
 }
 
-t_test <- function(x1, x2) {
-  test <- t.test(x1, x2)
-  
-  # use sprintf() to format t.test() results compactly
-  sprintf(
-    "p value: %0.3f\n[%0.2f, %0.2f]",
-    test$p.value, test$conf.int[1], test$conf.int[2]
-  )
-}
+download("injuries.tsv.gz")
+download("population.tsv")
+download("products.tsv")
 
-x1 <- rnorm(100, mean = 0, sd = 0.5)
-x2 <- rnorm(200, mean = 0.15, sd = 0.9)
+injuries <- vroom::vroom("neiss/injuries.tsv.gz")
+injuries
 
-freqpoly(x1, x2)
-cat(t_test(x1, x2))
-#> p value: 0.005
-#> [-0.39, -0.07]
+products <- vroom::vroom("neiss/products.tsv")
+products
 
+population <- vroom::vroom("neiss/population.tsv")
+population
+
+selected <- injuries %>% filter(prod_code == 649)
+nrow(selected)
+
+selected %>% count(location, wt = weight, sort = TRUE)
+
+selected %>% count(body_part, wt = weight, sort = TRUE)
+
+selected %>% count(diag, wt = weight, sort = TRUE)
+
+summary <- selected %>% 
+  count(age, sex, wt = weight)
+
+summary %>% 
+  ggplot(aes(age, n, color = sex)) +
+  geom_line() +
+  labs(y = "Estimated number of injuries")
+
+summary1 <- selected %>% 
+  count(age, sex, wt = weight) %>% 
+  left_join(population, by = c("age", "sex")) %>% 
+  mutate(rate = n / population * 1e4)
+
+summary1 %>% 
+  ggplot(aes(age, rate, color = sex)) +
+  geom_line(na.rm = TRUE) +
+  labs(y = "Injuries per 10,000 people")
+
+selected %>% 
+  sample_n(10) %>% 
+  pull(narrative)
+
+prod_codes <- setNames(products$prod_code, products$title)
 
 ui <- fluidPage(
   fluidRow(
-    column(4, 
-           "Distribution 1",
-           numericInput("n1", label = "n", value = 1000, min = 1),
-           numericInput("mean1", label = "µ", value = 0, step = 0.1),
-           numericInput("sd1", label = "σ", value = 0.5, min = 0.1, step = 0.1)
-    ),
-    column(4, 
-           "Distribution 2",
-           numericInput("n2", label = "n", value = 1000, min = 1),
-           numericInput("mean2", label = "µ", value = 0, step = 0.1),
-           numericInput("sd2", label = "σ", value = 0.5, min = 0.1, step = 0.1)
-    ),
-    column(4,
-           "Frequency polygon",
-           numericInput("binwidth", label = "Bin width", value = 0.1, step = 0.1),
-           sliderInput("range", label = "range", value = c(-3, 3), min = -5, max = 5)
-    )
+    
   ),
   fluidRow(
-    column(9, plotOutput("hist")),
-    column(3, verbatimTextOutput("ttest"))
+    
+  ),
+  fluidRow(
+    
   )
+  
 )
 
 server <- function(input, output, session) {
-  output$hist <- renderPlot({
-    x1 <- rnorm(input$n1, input$mean1, input$sd1)
-    x2 <- rnorm(input$n2, input$mean2, input$sd2)
-    
-    freqpoly(x1, x2, binwidth = input$binwidth, xlim = input$range)
-  }, res = 96)
   
-  output$ttest <- renderText({
-    x1 <- rnorm(input$n1, input$mean1, input$sd1)
-    x2 <- rnorm(input$n2, input$mean2, input$sd2)
-    
-    t_test(x1, x2)
-  })
 }
+
 shinyApp(ui, server)
+
