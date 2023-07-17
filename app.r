@@ -58,9 +58,14 @@ prod_codes <- setNames(products$prod_code, products$title)
 
 ui <- fluidPage(
   fluidRow(
-    column(6,
-           selectInput("code", "Product", choices = prod_codes)
-    )
+    column(8,
+           selectInput("code", "Product",
+                       choices = setNames(products$prod_code, products$title),
+                       width = "100%"
+           )
+    ),
+    column(2, 
+           selectInput("y", "Y axis", c("rate", "count")))
   ),
   fluidRow(
     column(4, tableOutput("diag")),
@@ -77,6 +82,7 @@ server <- function(input, output, session) {
   
   # convert the variable to a factor, order by the frequency of 
   # the levels, and then lump together all levels after the top 5
+   # KEY POINT IS TO ROUND UP NUMBERS AND SUMMARISE OTHER IN 6TH ROW
   
   injuries %>%
     mutate(diag = fct_lump(fct_infreq(diag), n = 5)) %>%
@@ -97,12 +103,14 @@ server <- function(input, output, session) {
     )
   
   output$body_part <- renderTable(
-    selected() %>% count(body_part, wt = weight, sort = TRUE) %>% head(6)
-    #count_top(selected(), body_part), width = "100%"
+    # selected() %>% 
+    #   count(body_part, wt = weight, sort = TRUE) %>% 
+    #   head(6)
+    count_top(selected(), body_part), width = "100%"
   )
   
   output$location <- renderTable(
-    selected() %>% count(location, wt = weight, sort = TRUE) %>% head(6)
+    count_top(selected(), location), width = "100%"
   )
   
   summary <- reactive({
@@ -113,10 +121,17 @@ server <- function(input, output, session) {
     })
   
   output$age_sex <- renderPlot({
-    summary() %>% 
-      ggplot(aes(age, n, color = sex)) +
-      geom_line() +
-      labs(y = "Estimated number of injuries")
+    if(input$y == "count"){
+      summary() %>% 
+        ggplot(aes(age, n, color = sex)) +
+        geom_line() +
+        labs(y = "Estimated number of injuries")
+    } else {
+      summary() %>%
+        ggplot(aes(age, rate, colour = sex)) +
+        geom_line(na.rm = TRUE) +
+        labs(y = "Injuries per 10,000 people")
+    }
   }, res = 96)
 }
 
