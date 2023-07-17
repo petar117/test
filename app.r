@@ -53,6 +53,7 @@ selected %>%
   sample_n(10) %>% 
   pull(narrative)
 
+
 prod_codes <- setNames(products$prod_code, products$title)
 
 ui <- fluidPage(
@@ -72,19 +73,51 @@ ui <- fluidPage(
 )
 
 server <- function(input, output, session) {
-  selected <- reactive(injuries %>% filter(prod_code == input$code))
+   selected <- reactive(injuries %>% filter(prod_code == input$code))
+  
+  # convert the variable to a factor, order by the frequency of 
+  # the levels, and then lump together all levels after the top 5
+  
+  injuries %>%
+    mutate(diag = fct_lump(fct_infreq(diag), n = 5)) %>%
+    group_by(diag) %>%
+    summarise(n = as.integer(sum(weight)))
+  
+  # function that automates this:
+  
+  count_top <- function(df, var, n = 5) {
+    df %>%
+      mutate({{ var }} := fct_lump(fct_infreq({{ var }}), n = n)) %>%
+      group_by({{ var }}) %>%
+      summarise(n = as.integer(sum(weight)))
+  }
   
   output$diag <- renderTable(
-    selected() %>% count(diag, wt = weight, sort = TRUE)
+    count_top(selected(), diag), width = "100%"
     )
   
   output$body_part <- renderTable(
-    selected() %>% count(body_part, wt = weight, sort = TRUE)
+    selected() %>% count(body_part, wt = weight, sort = TRUE) %>% head(6)
+    #count_top(selected(), body_part), width = "100%"
   )
   
   output$location <- renderTable(
-    selected() %>% count(location, wt = weight, sort = TRUE)
+    selected() %>% count(location, wt = weight, sort = TRUE) %>% head(6)
   )
+  
+  summary <- reactive({
+    selected() %>% 
+      count(age, sex, wt = weight) %>% 
+      left_join(population, by = c("age", "sex")) %>% 
+      mutate(rate = n / population * 1e4)
+    })
+  
+  output$age_sex <- renderPlot({
+    summary() %>% 
+      ggplot(aes(age, n, color = sex)) +
+      geom_line() +
+      labs(y = "Estimated number of injuries")
+  }, res = 96)
 }
 
 shinyApp(ui, server)
