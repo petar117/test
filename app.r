@@ -14,15 +14,10 @@ download("population.tsv")
 download("products.tsv")
 
 injuries <- vroom::vroom("neiss/injuries.tsv.gz")
-injuries
-
-products <- vroom::vroom("neiss/products.tsv")
-products
-
 population <- vroom::vroom("neiss/population.tsv")
-population
+products <- vroom::vroom("neiss/products.tsv")
 
-selected <- injuries %>% filter(prod_code == 649)
+selected <- injuries %>% dplyr::filter(prod_code == 649)
 nrow(selected)
 
 selected %>% count(location, wt = weight, sort = TRUE)
@@ -55,7 +50,7 @@ selected %>%
 
 
 prod_codes <- setNames(products$prod_code, products$title)
-
+prod_codes <- setNames(products$prod_code, products$title)
 ui <- fluidPage(
   fluidRow(
     column(8,
