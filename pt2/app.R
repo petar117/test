@@ -18,9 +18,24 @@ ui <- navbarPage(
     numericInput("skip", "Rows to skip", 0, min = 0),
     numericInput("rows", "Rows to preview", 10, min = 1)
   ),
-  tabPanel("panel 3", "three",
-           titlePanel("A themed plot"),
-           plotOutput("plot"),),
+  tabPanel(
+    "panel 3", "three",
+    fluidPage(
+      titlePanel("Plot"),
+      fluidRow(
+        column(
+          5,
+          plotOutput("plot", click = "plot_click", brush = "plot_brush")
+        ),
+        column(
+          7,
+          verbatimTextOutput("info"),
+          tableOutput("data"),
+          tableOutput("data1")
+        )
+      )
+    ),
+  ),
   navbarMenu(
     "subpanels",
     tabPanel("panel 4a", "four-a"),
@@ -46,10 +61,30 @@ server <- function(input, output, session) {
   output$total <- renderText({
     total()
   })
-  output$plot <- renderPlot({
-    ggplot(mtcars, aes(wt, mpg)) +
-      geom_point() +
-      geom_smooth()
-  }, res = 96)
+
+  output$plot <- renderPlot(
+    {
+      ggplot(mtcars, aes(wt, mpg)) +
+        geom_point() +
+        geom_smooth()
+    },
+    res = 96
+  )
+
+  output$info <- renderPrint({
+    req(input$plot_click)
+    x <- round(input$plot_click$x, 2)
+    y <- round(input$plot_click$y, 2)
+    cat("[", x, ", ", y, "]", sep = "")
+  })
+  
+  output$data <- renderTable({
+    req(input$plot_click)
+    nearPoints(mtcars, input$plot_click)
+  })
+  
+  output$data1 <- renderTable({
+    brushedPoints(mtcars, input$plot_brush)
+  })
 }
 shinyApp(ui, server)
