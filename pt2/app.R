@@ -18,7 +18,9 @@ ui <- navbarPage(
     numericInput("skip", "Rows to skip", 0, min = 0),
     numericInput("rows", "Rows to preview", 10, min = 1)
   ),
-  tabPanel("panel 3", "three"),
+  tabPanel("panel 3", "three",
+           titlePanel("A themed plot"),
+           plotOutput("plot"),),
   navbarMenu(
     "subpanels",
     tabPanel("panel 4a", "four-a"),
@@ -29,6 +31,7 @@ ui <- navbarPage(
 
 
 server <- function(input, output, session) {
+  thematic::thematic_shiny()
   observeEvent(input$x, {
     message(glue("Updating y from {input$y} to {input$x * 2}"))
     updateSliderInput(session, "y", value = input$x * 2)
@@ -43,5 +46,10 @@ server <- function(input, output, session) {
   output$total <- renderText({
     total()
   })
+  output$plot <- renderPlot({
+    ggplot(mtcars, aes(wt, mpg)) +
+      geom_point() +
+      geom_smooth()
+  }, res = 96)
 }
 shinyApp(ui, server)
