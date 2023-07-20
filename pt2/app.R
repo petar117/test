@@ -38,6 +38,7 @@ ui <- navbarPage(
           tableOutput("data1")
         )
       )
+<<<<<<< HEAD
     )
   ),
   tabPanel(
@@ -69,6 +70,15 @@ ui <- navbarPage(
         ))
       )
     )
+=======
+    ),
+  ),
+  navbarMenu(
+    "subpanels",
+    tabPanel("panel 4a", "four-a"),
+    tabPanel("panel 4b", "four-b"),
+    tabPanel("panel 4c", "four-c")
+>>>>>>> 2dc6b874a9cb06988c664ddb98fa625a832c69ec
   )
 )
 
@@ -92,11 +102,19 @@ server <- function(input, output, session) {
     total()
   })
 
+<<<<<<< HEAD
   # TAB 3 PLOT INTERACTION AND TABLE ENTRIES FROM PLOT
   output$plot <- renderPlot(
     {
       ggplot(mtcars, aes(wt, mpg)) +
         geom_point()
+=======
+  output$plot <- renderPlot(
+    {
+      ggplot(mtcars, aes(wt, mpg)) +
+        geom_point() +
+        geom_smooth()
+>>>>>>> 2dc6b874a9cb06988c664ddb98fa625a832c69ec
     },
     res = 96
   )
@@ -107,6 +125,7 @@ server <- function(input, output, session) {
     y <- round(input$plot_click$y, 2)
     cat("[", x, ", ", y, "]", sep = "")
   })
+<<<<<<< HEAD
 
   output$data <- renderTable({
     req(input$plot_click)
@@ -160,6 +179,17 @@ server <- function(input, output, session) {
     },
     res = 96
   )
+=======
+  
+  output$data <- renderTable({
+    req(input$plot_click)
+    nearPoints(mtcars, input$plot_click)
+  })
+  
+  output$data1 <- renderTable({
+    brushedPoints(mtcars, input$plot_brush)
+  })
+>>>>>>> 2dc6b874a9cb06988c664ddb98fa625a832c69ec
 }
 
 
