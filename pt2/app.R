@@ -11,13 +11,13 @@ server <- function(input, output, session) {
     message(glue("Updating y from {input$y} to {input$x * 2}"))
     updateSliderInput(session, "y", value = input$x * 2)
   })
-  
+
   total <- reactive({
     total <- input$x + input$y + input$z
     message(glue("New total is {total}"))
     total
   })
-  
+
   output$total <- renderText({
     total()
   })
