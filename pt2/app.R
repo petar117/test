@@ -46,16 +46,27 @@ ui <- navbarPage(
       titlePanel("Plot and reactive val"),
       fluidRow(
         column(
-          6,
-          plotOutput("plot1",
-            brush = "plot_brush",
-            dblclick = "plot_reset"
-          )
+          4,
+          sliderInput("height", "height", min = 100, max = 500, value = 250),
+          sliderInput("width", "width", min = 100, max = 500, value = 250),
         ),
         column(
-          6,
-          plotOutput("plot2", click = "plot_click")
+          8,
+          plotOutput("plot1",
+            brush = "plot_brush",
+            dblclick = "plot_reset",
+            width = 400,
+            height = 400
+          )
         )
+      ),
+      fluidRow(
+        column(4, ),
+        column(8, plotOutput("plot2",
+          click = "plot_click",
+          width = 250,
+          height = 250
+        ))
       )
     )
   )
@@ -65,7 +76,7 @@ ui <- navbarPage(
 server <- function(input, output, session) {
   thematic::thematic_shiny()
 
-  #TAB 1 SLIDERS
+  # TAB 1 SLIDERS
   observeEvent(input$x, {
     message(glue("Updating y from {input$y} to {input$x * 2}"))
     updateSliderInput(session, "y", value = input$x * 2)
@@ -81,7 +92,7 @@ server <- function(input, output, session) {
     total()
   })
 
-  #TAB 3 PLOT INTERACTION AND TABLE ENTRIES FROM PLOT
+  # TAB 3 PLOT INTERACTION AND TABLE ENTRIES FROM PLOT
   output$plot <- renderPlot(
     {
       ggplot(mtcars, aes(wt, mpg)) +
@@ -107,7 +118,7 @@ server <- function(input, output, session) {
   })
 
 
-  #TAB 4 PLOT INTERACTION AND CRATING REACTIVE VALUES
+  # TAB 4 PLOT INTERACTION AND CRATING REACTIVE VALUES
   selected <- reactiveVal(rep(FALSE, nrow(mtcars)))
 
   observeEvent(input$plot_brush, {
@@ -126,8 +137,12 @@ server <- function(input, output, session) {
         geom_point(aes(colour = sel)) +
         scale_colour_discrete(limits = c("TRUE", "FALSE"))
     },
+    width = function() input$width,
+    height = function() input$height,
     res = 96
   )
+
+
 
 
   dist <- reactiveVal(rep(1, nrow(df)))
