@@ -6,6 +6,18 @@ library(tidyverse)
 set.seed(1014)
 df <- data.frame(x1 = rnorm(100), y1 = rnorm(100))
 
+report_path <- tempfile(fileext = ".Rmd")
+file.copy("report.Rmd", report_path, overwrite = TRUE)
+
+render_report <- function(input, output, params) {
+  rmarkdown::render(
+    input,
+    output_file = output,
+    params = params,
+    envir = new.env(parent = globalenv())
+  )
+}
+
 ui <- navbarPage(
   theme = bslib::bs_theme(bootswatch = "sandstone"),
   "Page title",
@@ -43,13 +55,19 @@ ui <- navbarPage(
                  sidebarPanel(
                    #fileInput("file", "Data", buttonLabel = "Upload..."),
                    fileInput("upload", NULL, accept = c(".csv", ".tsv")),
-                   numericInput("n1", "Rows", value = 5, min = 1, step = 1),
+                   numericInput(
+                     "n1",
+                     "Rows",
+                     value = 5,
+                     min = 1,
+                     step = 1
+                   ),
                    actionButton("delete", "Delete all files?")
                  ),
                  mainPanel(
                    fluidRow(
                      shinyFeedback::useShinyFeedback(),
-                     numericInput("n", "Enter an even number", value = ""),
+                     numericInput("n3", "Enter an even number", value = ""),
                      textOutput("half"),
                      HTML("<br><br>")
                    ),
@@ -63,56 +81,68 @@ ui <- navbarPage(
                  )
                )
              )),
-    tabPanel("panel 2.1",
-             fluidPage(
-               fluidRow(
-                 column(
-                   4,
-                   shinyFeedback::useShinyFeedback(),
-                   textInput("dataset", "Dataset name"),
-                   actionButton("goodnight", "Good night"),
-                   HTML("<br><br>"),
-                   
-                 ),
-                 column(4,
-                        tableOutput("data3"))
-               ),
-               fluidRow(
-                 HTML("<br><br>"),
-                 numericInput("x_sqrt", "x", value = 0),
-                 selectInput(
-                   "trans",
-                   "transformation",
-                   choices = c("square", "log", "square-root")
-                 ),
-                 textOutput("out"),
-                 HTML("<br><br>")
-               ),
-               fluidRow(
-                 column(
-                   4,
-                   numericInput("steps", "How many steps?", 10),
-                   actionButton("go", "go"),
-                   textOutput("result")
-                 )
-               ),
-               fluidRow(
-                 column(
-                   4,
-                   waiter::use_waitress(),
-                   numericInput("steps1", "How many steps?", 10),
-                   actionButton("go1", "go"),
-                   textOutput("result1")
-                 ),
-                 column(
-                   4,
-                   waiter::use_waiter(),
-                   numericInput("steps2", "How many steps?", 10),
-                   actionButton("go2", "go"),
-                   textOutput("result2")
-                 )
-               )
-             ))
+    tabPanel(
+      "panel 2.1",
+      fluidPage(
+        fluidRow(
+          column(
+            4,
+            shinyFeedback::useShinyFeedback(),
+            textInput("dataset", "Dataset name"),
+            actionButton("goodnight", "Good night"),
+            HTML("<br><br>"),
+            
+          ),
+          column(4,
+                 tableOutput("data3"))
+        ),
+        fluidRow(column(
+          4,
+          selectInput("dataset1", "Pick a dataset", ls("package:datasets")),
+          tableOutput("preview"),
+          downloadButton("download", "Download .tsv"),
+          HTML("<br><br>")
+        )),
+        fluidRow(column(
+          4,
+          sliderInput("n", "Number of points", 1, 100, 50),
+          downloadButton("report", "Generate report"),
+        )),
+        fluidRow(
+          HTML("<br><br>"),
+          numericInput("x_sqrt", "x", value = 0),
+          selectInput(
+            "trans",
+            "transformation",
+            choices = c("square", "log", "square-root")
+          ),
+          textOutput("out"),
+          HTML("<br><br>")
+        ),
+        fluidRow(column(
+          4,
+          numericInput("steps", "How many steps?", 10),
+          actionButton("go", "go"),
+          textOutput("result")
+        )),
+        fluidRow(
+          column(
+            4,
+            waiter::use_waitress(),
+            numericInput("steps1", "How many steps?", 10),
+            actionButton("go1", "go"),
+            textOutput("result1")
+          ),
+          column(
+            4,
+            waiter::use_waiter(),
+            numericInput("steps2", "How many steps?", 10),
+            actionButton("go2", "go"),
+            textOutput("result2")
+          )
+        )
+      )
+    )
   ),
   tabPanel("panel 3",
            fluidPage(
@@ -173,6 +203,7 @@ ui <- navbarPage(
                       ))
            ))
 )
+
 
 
 server <- function(input, output, session) {
@@ -277,10 +308,10 @@ server <- function(input, output, session) {
   
   # TAB 2 INPUTS AND USER FEEDBACK
   half <- reactive({
-    even <- input$n %% 2 == 0
-    shinyFeedback::feedbackWarning("n", !even, "Please select an even number")
+    even <- input$n3 %% 2 == 0
+    shinyFeedback::feedbackWarning("n3", !even, "Please select an even number")
     req(even)
-    input$n / 2
+    input$n3 / 2
   })
   
   output$half <- renderText(half())
@@ -364,11 +395,12 @@ server <- function(input, output, session) {
   output$result <- renderText(round(data4(), 2))
   
   
-  #progress bar 
+  #progress bar
   
   data5 <- eventReactive(input$go1, {
-    waitress <- waiter::Waitress$new(max = input$steps1, 
-                                     selector = "#steps1", theme = "overlay")
+    waitress <- waiter::Waitress$new(max = input$steps1,
+                                     selector = "#steps1",
+                                     theme = "overlay")
     on.exit(waitress$close())
     
     for (i in seq_len(input$steps1)) {
@@ -391,16 +423,41 @@ server <- function(input, output, session) {
   })
   output$result2 <- renderText(round(data6(), 2))
   
+  
+  # DOWNLOAD button tab 2.1
+  
+  data8 <- reactive({
+    out <- get(input$dataset1, "package:datasets")
+    if (!is.data.frame(out)) {
+      validate(paste0("'", input$dataset1, "' is not a data frame"))
+    }
+    out
+  })
+  
+  output$preview <- renderTable({
+    head(data8())
+  })
+  
+  output$download <- downloadHandler(
+    filename = function() {
+      paste0(input$dataset1, ".tsv")
+    },
+    content = function(file) {
+      vroom::vroom_write(data8(), file)
+    }
+  )
+  
   # DELETE BUTTON TAB 2
   
   data7 <- reactive({
     req(input$upload)
     
     ext <- tools::file_ext(input$upload$name)
-    switch(ext,
-           csv = vroom::vroom(input$upload$datapath, delim = ","),
-           tsv = vroom::vroom(input$upload$datapath, delim = "\t"),
-           validate("Invalid file; Please upload a .csv or .tsv file")
+    switch(
+      ext,
+      csv = vroom::vroom(input$upload$datapath, delim = ","),
+      tsv = vroom::vroom(input$upload$datapath, delim = "\t"),
+      validate("Invalid file; Please upload a .csv or .tsv file")
     )
   })
   
@@ -423,7 +480,6 @@ server <- function(input, output, session) {
   })
   
   observeEvent(input$ok, {
-    
     showNotification("Files deleted")
     removeModal()
   })
@@ -431,6 +487,20 @@ server <- function(input, output, session) {
     removeModal()
   })
   
+  
+  # generate and download a report tab 2.1
+  output$report <- downloadHandler(
+    filename = "report.html",
+    content = function(file) {
+      params <- list(n = input$n)
+      callr::r(render_report,
+               list(
+                 input = report_path,
+                 output = file,
+                 params = params
+               ))
+    }
+  )
 }
 
 shinyApp(ui, server)
