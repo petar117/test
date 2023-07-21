@@ -71,7 +71,9 @@ ui <- navbarPage(
           column(
             4,
             shinyFeedback::useShinyFeedback(),
-            textInput("dataset", "Dataset name")
+            textInput("dataset", "Dataset name"),
+            actionButton("goodnight", "Good night")
+            
           ),
           column(
             4,
@@ -296,10 +298,23 @@ server <- function(input, output, session) {
 
 
   # TAB 2.1
+  
+  notify <- function(msg, id = NULL) {
+    showNotification(msg, id = id, duration = NULL, closeButton = FALSE)
+  }
+  
   data3 <- reactive({
     req(input$dataset)
 
     exists <- exists(input$dataset, "package:datasets")
+    
+    id <- notify("Reading data...")
+    on.exit(removeNotification(id), add = TRUE)
+    Sys.sleep(1)
+    
+    notify("Reticulating splines...", id = id)
+    Sys.sleep(1)
+  
     shinyFeedback::feedbackDanger("dataset", !exists, "Unknown dataset")
     req(exists, cancelOutput = TRUE)
 
@@ -321,6 +336,16 @@ server <- function(input, output, session) {
       "square-root" = sqrt(input$x_sqrt),
       log = log(input$x_sqrt)
     )
+  })
+  
+  observeEvent(input$goodnight, {
+    showNotification("So long")
+    Sys.sleep(1)
+    showNotification("Farewell", type = "message")
+    Sys.sleep(1)
+    showNotification("Auf Wiedersehen", type = "warning")
+    Sys.sleep(1)
+    showNotification("Adieu", type = "error")
   })
 }
 
