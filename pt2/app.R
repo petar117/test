@@ -44,7 +44,8 @@ ui <- navbarPage(
                    fileInput("file", "Data", buttonLabel = "Upload..."),
                    textInput("delim", "Delimiter (leave blank to guess)", ""),
                    numericInput("skip", "Rows to skip", 0, min = 0),
-                   numericInput("rows", "Rows to preview", 10, min = 1)
+                   numericInput("rows", "Rows to preview", 10, min = 1),
+                   actionButton("delete", "Delete all files?")
                  ),
                  mainPanel(
                    fluidRow(
@@ -389,6 +390,27 @@ server <- function(input, output, session) {
     runif(1)
   })
   output$result2 <- renderText(round(data6(), 2))
+  
+  # DELETE BUTTON TAB 2
+  modal_confirm <- modalDialog(
+    "Are you sure you want to continue?",
+    title = "Deleting files",
+    footer = tagList(
+      actionButton("cancel", "Cancel"),
+      actionButton("ok", "Delete", class = "btn btn-danger")
+    )
+  )
+  observeEvent(input$delete, {
+    showModal(modal_confirm)
+  })
+  
+  observeEvent(input$ok, {
+    showNotification("Files deleted")
+    removeModal()
+  })
+  observeEvent(input$cancel, {
+    removeModal()
+  })
   
 }
 
