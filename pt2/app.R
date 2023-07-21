@@ -10,11 +10,10 @@ report_path <- tempfile(fileext = ".Rmd")
 file.copy("report.Rmd", report_path, overwrite = TRUE)
 
 render_report <- function(input, output, params) {
-  rmarkdown::render(
-    input,
-    output_file = output,
-    params = params,
-    envir = new.env(parent = globalenv())
+  rmarkdown::render(input,
+                    output_file = output,
+                    params = params,
+                    envir = new.env(parent = globalenv())
   )
 }
 
@@ -191,7 +190,7 @@ ui <- navbarPage(
                  height = 250
                )
              )),
-             fluidRow(column(4, ),
+             fluidRow(column(4,),
                       column(
                         8,
                         plotOutput(
@@ -493,12 +492,10 @@ server <- function(input, output, session) {
     filename = "report.html",
     content = function(file) {
       params <- list(n = input$n)
-      callr::r(render_report,
-               list(
-                 input = report_path,
-                 output = file,
-                 params = params
-               ))
+      callr::r(
+        render_report,
+        list(input = report_path, output = file, params = params)
+      )
     }
   )
 }
