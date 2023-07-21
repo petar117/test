@@ -41,10 +41,9 @@ ui <- navbarPage(
                titlePanel("Inputs and user feedback"),
                sidebarLayout(
                  sidebarPanel(
-                   fileInput("file", "Data", buttonLabel = "Upload..."),
-                   textInput("delim", "Delimiter (leave blank to guess)", ""),
-                   numericInput("skip", "Rows to skip", 0, min = 0),
-                   numericInput("rows", "Rows to preview", 10, min = 1),
+                   #fileInput("file", "Data", buttonLabel = "Upload..."),
+                   fileInput("upload", NULL, accept = c(".csv", ".tsv")),
+                   numericInput("n1", "Rows", value = 5, min = 1, step = 1),
                    actionButton("delete", "Delete all files?")
                  ),
                  mainPanel(
@@ -58,7 +57,8 @@ ui <- navbarPage(
                      selectInput("language", "Language", choices = c("", "English", "Maori")),
                      textInput("name", "Name"),
                      textOutput("greeting"),
-                     HTML("<br><br>")
+                     HTML("<br><br>"),
+                     tableOutput("head")
                    )
                  )
                )
@@ -392,6 +392,23 @@ server <- function(input, output, session) {
   output$result2 <- renderText(round(data6(), 2))
   
   # DELETE BUTTON TAB 2
+  
+  data7 <- reactive({
+    req(input$upload)
+    
+    ext <- tools::file_ext(input$upload$name)
+    switch(ext,
+           csv = vroom::vroom(input$upload$datapath, delim = ","),
+           tsv = vroom::vroom(input$upload$datapath, delim = "\t"),
+           validate("Invalid file; Please upload a .csv or .tsv file")
+    )
+  })
+  
+  output$head <- renderTable({
+    head(data7(), input$n1)
+  })
+  
+  
   modal_confirm <- modalDialog(
     "Are you sure you want to continue?",
     title = "Deleting files",
@@ -400,11 +417,13 @@ server <- function(input, output, session) {
       actionButton("ok", "Delete", class = "btn btn-danger")
     )
   )
+  
   observeEvent(input$delete, {
     showModal(modal_confirm)
   })
   
   observeEvent(input$ok, {
+    
     showNotification("Files deleted")
     removeModal()
   })
