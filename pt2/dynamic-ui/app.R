@@ -46,6 +46,19 @@ ui <- navbarPage(
             tableOutput("data")
           )
         )
+      ),
+      fluidRow(HTML("<hr>")),
+      fluidPage(
+        titlePanel("Freezing reactive inputs"),
+        sidebarLayout(
+          sidebarPanel(
+            selectInput("dataset", "Choose a dataset", c("pressure", "cars")),
+            selectInput("column", "Choose column", character(0))
+          ),
+          mainPanel(
+            verbatimTextOutput("summary")
+          )
+        )
       )
     )
   ),
@@ -75,7 +88,7 @@ server <- function(input, output, session) {
   })
   
  
-  # table based on selected input 
+  # table based on selected input / sales dashboard
   territory <- reactive({
     req(input$territory)
     filter(sales, TERRITORY == input$territory)
@@ -117,7 +130,18 @@ server <- function(input, output, session) {
   })
   
   
- 
+  # freezing reactive inputs / !!! always use it when you dynamically change an input value
+  dataset <- reactive(get(input$dataset, "package:datasets"))
+  
+  observeEvent(input$dataset, {
+    freezeReactiveValue(input, "column")
+    updateSelectInput(inputId = "column", choices = names(dataset()))
+  })
+  
+  output$summary <- renderPrint({
+    summary(dataset()[[input$column]])
+  })
+  
 }
 
 shinyApp(ui, server)
