@@ -1,5 +1,7 @@
 library(shiny)
 library(dplyr, warn.conflicts = FALSE)
+library(shinyjs)
+
 sales <- vroom::vroom("sales_data_sample.csv", col_types = list(), na = "")
 sales %>% 
   select(TERRITORY, CUSTOMERNAME, ORDERNUMBER, everything()) %>%
@@ -63,7 +65,13 @@ ui <- navbarPage(
     )
   ),
   tabPanel(
-    "tab 2"
+    "tab 2",
+    fluidPage(
+      titlePanel("Exercises"),
+      useShinyjs() ,
+      numericInput("year", "year", value = 2020),
+      dateInput("date", "date", value = Sys.Date())
+    )
   )
 )
 server <- function(input, output, session) {
@@ -140,6 +148,20 @@ server <- function(input, output, session) {
   
   output$summary <- renderPrint({
     summary(dataset()[[input$column]])
+  })
+  
+  
+  # exercises
+  #
+  observeEvent(input$year, {
+    
+    req(input$year) # stop if year is blank
+    daterange <- range(as.Date(paste0(input$year, "-01-01")),as.Date(paste0(input$year, "-12-31")))
+    updateDateInput(session, "date", min = daterange[1], max = daterange[2] )
+    delay(250,  # delay 250ms
+          updateDateInput(session,"date",
+                          value = daterange[1]
+          ))
   })
   
 }
