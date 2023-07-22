@@ -1,5 +1,9 @@
 library(shiny)
 library(dplyr, warn.conflicts = FALSE)
+sales <- vroom::vroom("sales_data_sample.csv", col_types = list(), na = "")
+sales %>% 
+  select(TERRITORY, CUSTOMERNAME, ORDERNUMBER, everything()) %>%
+  arrange(ORDERNUMBER)
 
 ui <- navbarPage(
   "Page title",
@@ -26,6 +30,21 @@ ui <- navbarPage(
           3,
           numericInput("n1", "Simulations", 10),
           actionButton("simulate", "Simulate")
+        )
+      ),
+      fluidRow(HTML("<hr>")),
+      fluidPage(
+        titlePanel("Sales Dashboard"),
+        sidebarLayout(
+          sidebarPanel(
+            selectInput("territory", "Territory", choices = unique(sales$TERRITORY)),
+            selectInput("customername", "Customer", choices = NULL),
+            selectInput("ordernumber", "Order number", choices = NULL, size = 5, selectize = FALSE),
+          ),
+          mainPanel(
+            uiOutput("customer"),
+            tableOutput("data")
+          )
         )
       )
     )
@@ -54,6 +73,51 @@ server <- function(input, output, session) {
     label <- paste0("Simulate ", input$n1, " times")
     updateActionButton(inputId = "simulate", label = label)
   })
+  
+ 
+  # table based on selected input 
+  territory <- reactive({
+    req(input$territory)
+    filter(sales, TERRITORY == input$territory)
+  })
+  
+  customer <- reactive({
+    req(input$customername)
+    filter(territory(), CUSTOMERNAME == input$customername)
+  })
+  
+  output$customer <- renderUI({
+      row <- customer()[1, ]
+    tags$div(
+      class = "well",
+      tags$p(tags$strong("Name: "), row$CUSTOMERNAME),
+      tags$p(tags$strong("Phone: "), row$PHONE),
+      tags$p(tags$strong("Contact: "), row$CONTACTFIRSTNAME, " ", row$CONTACTLASTNAME)
+    )
+  })
+  
+  order <- reactive({
+    req(input$ordernumber)
+    customer() %>%
+      filter(ORDERNUMBER == input$ordernumber) %>%
+      arrange(ORDERLINENUMBER) %>%
+      select(PRODUCTLINE, QUANTITYORDERED, PRICEEACH, SALES, STATUS)
+  })
+  
+  output$data <- renderTable(order())
+  
+  observeEvent(territory(), {
+    updateSelectInput(session, "customername", 
+                      choices = unique(territory()$CUSTOMERNAME), 
+                      selected = character())
+  })
+  observeEvent(customer(), {
+    updateSelectInput(session, "ordernumber", 
+                      choices = unique(customer()$ORDERNUMBER))
+  })
+  
+  
+ 
 }
 
 shinyApp(ui, server)
