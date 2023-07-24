@@ -7,6 +7,7 @@ sales %>%
   select(TERRITORY, CUSTOMERNAME, ORDERNUMBER, everything()) %>%
   arrange(ORDERNUMBER)
 
+
 ui <- navbarPage(
   "Page title",
   tabPanel(
@@ -71,6 +72,54 @@ ui <- navbarPage(
       useShinyjs() ,
       numericInput("year", "year", value = 2020),
       dateInput("date", "date", value = Sys.Date())
+    ),
+    fluidRow(HTML("<hr>")),
+    fluidPage(
+      sidebarLayout(
+        sidebarPanel(
+          checkboxInput("moreControls", 
+                        label = "Show advanced controls?",
+                        value = FALSE
+          )
+        ),
+        mainPanel(
+          tabsetPanel(
+            id = "basic",
+            type = "hidden",
+            tabPanelBody("panel1",
+                         numericInput("basicControl", label = "Basic:", 0),
+            )
+          ),
+          tabsetPanel(
+            id = "advanced",
+            type = "hidden",
+            tabPanelBody("emptyPanel", style = "display: none"),
+            tabPanelBody("panel2",
+                         numericInput("advancedCotrol", label = "Advanced:", 1)
+            )
+          )
+        )
+      )
+    )
+    
+  ),
+  tabPanel(
+    "tab 3",
+    fluidPage(
+      sidebarLayout(
+        sidebarPanel(
+          selectInput("controller", "Show", choices = paste0("panel", 1:3))
+        ),
+        mainPanel(
+          tabsetPanel(
+            id = "switcher",
+            type = "hidden",
+            tabPanelBody("panel1", "Panel 1 content"),
+            tabPanelBody("panel2", "Panel 2 content"),
+            tabPanelBody("panel3", "Panel 3 content")
+          )
+        )
+      )
     )
   )
 )
@@ -162,6 +211,43 @@ server <- function(input, output, session) {
           updateDateInput(session,"date",
                           value = daterange[1]
           ))
+  })
+  
+  # updates input$county choices based on input$state. 
+  # For an added challenge, also change the label from “County” to 
+  # “Parrish” for Louisana and “Borrough” for “Alaska”.
+  
+  # label <- reactive({
+  #   switch(input$state,
+  #          "Alaska" = "Burrough",
+  #          "Louisiana" = "Parish",
+  #          "County")
+  # })
+  # 
+  # observeEvent( input$state, {
+  #   updateSelectInput(session, "county", label = label(),
+  #                     choices = county %>% 
+  #                       filter(state == input$state) %>%
+  #                       select(name) %>%
+  #                       distinct())
+  # })
+  
+  
+  # Use a hidden tabset to show additional controls only if the 
+  # user checks an “advanced” check box.
+  observeEvent(input$moreControls, {
+    if (input$moreControls) {
+      updateTabsetPanel(session, "advanced", selected = "panel2")
+    } else {
+      updateTabsetPanel(session, "advanced", selected = "emptyPanel")
+    }
+  })
+  
+  
+  # DYNAMIC VISABILITY - TAB 3
+  
+  observeEvent(input$controller, {
+    updateTabsetPanel(inputId = "switcher", selected = input$controller)
   })
   
 }
