@@ -117,7 +117,42 @@ ui <- navbarPage(
           )
         )
       )
+    ),
+    fluidRow(HTML("<hr>")),
+    fluidPage(
+  sidebarLayout(
+    sidebarPanel(
+      selectInput("geom", "Geom function to use", 
+        choices = c("histogram", "freqpoly", "density")
+      ),
+      tabsetPanel(
+        id = "params",
+        type = "hidden",
+        tabPanel("histogram",
+          numericInput("hist_bw", 
+            label = "Binwidth", value = 0.1, 
+            min = 0.1, max = 5, step = 0.1
+          )
+        ),
+        tabPanel("freqpoly", 
+          numericInput("freqpoly_bw", 
+            label = "Binwidth", value = 0.1, 
+            min = 0.1, max = 5, step = 0.1
+          )
+        ),
+        tabPanel("density",
+          numericInput("density_bw", 
+            label = "Standard deviation of smoothing kernel",
+            value = 0.01, min = 0.01, max = 1, step = 0.01
+          )
+        )
+      )
+    ),
+    mainPanel(
+      plotOutput("gg")
     )
+  )
+)
     
   ),
   tabPanel(
@@ -152,7 +187,29 @@ ui <- navbarPage(
           plotOutput("hist")
         )
       )
-    )
+    ),
+    fluidRow(HTML("<hr>")),
+    fluidPage(
+      tabsetPanel(
+        id = "wizard",
+        type = "hidden",
+        tabPanel("page_1", 
+                 "Welcome!",
+                 actionButton("page_12", "next")
+        ),
+        tabPanel("page_2", 
+                 "Only one page to go",
+                 actionButton("page_21", "prev"),
+                 actionButton("page_23", "next")
+        ),
+        tabPanel("page_3", 
+                 "You're done!",
+                 actionButton("page_32", "prev")
+        )
+      )
+    ),
+    fluidRow(HTML("<hr>"))
+    
     
   )
 )
@@ -283,6 +340,14 @@ server <- function(input, output, session) {
     updateTabsetPanel(inputId = "switcher", selected = input$controller)
   })
   
+  # !!! 
+  # Imagine that you want an app that allows the user to simulate from 
+  # the normal, uniform, and exponential distributions. Each distribution 
+  # has different parameters, so we’ll need some way to show different 
+  # controls for different distributions. Here, I’ll put the unique user 
+  # interface for each distribution in its own tabPanel(), and then arrange 
+  # the three tabs into a tabsetPanel().
+  
   observeEvent(input$dist, {
     updateTabsetPanel(inputId = "params", selected = input$dist)
   }) 
@@ -295,6 +360,45 @@ server <- function(input, output, session) {
     )
   })
   output$hist <- renderPlot(hist(sample()), res = 96)
+  
+  # wizard interface
+  switch_page <- function(i) {
+    updateTabsetPanel(inputId = "wizard", selected = paste0("page_", i))
+  }
+  
+  observeEvent(input$page_12, switch_page(2))
+  observeEvent(input$page_21, switch_page(1))
+  observeEvent(input$page_23, switch_page(3))
+  observeEvent(input$page_32, switch_page(2))
+  
+  
+  # !!!!  EXERCISES
+  
+  # Create an app that plots ggplot(diamonds, aes(carat)) but allows the
+  # user to choose which geom to use: geom_histogram(), geom_freqpoly(), 
+  # or geom_density(). Use a hidden tabset to allow the user to select 
+  # different arguments depending on the geom: geom_histogram() and 
+  # geom_freqpoly() have a binwidth argument; geom_density() has a bw 
+  # argument.
+  
+  observeEvent(input$geom, {
+    updateTabsetPanel(inputId = "params", selected = input$geom)
+  }) 
+  
+  gg_args <- reactive({
+    switch(input$geom, 
+           histogram = geom_histogram(binwidth = input$hist_bw),
+           freqpoly = geom_freqpoly(binwidth = input$freqpoly_bw),
+           density = geom_density(bw = input$density_bw)
+    )
+  })
+  
+  output$gg <- renderPlot({
+    ggplot(diamonds, aes(carat)) +
+      gg_args()
+  })
+
 }
+
 
 shinyApp(ui, server)
