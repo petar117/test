@@ -73,7 +73,10 @@ ui <- navbarPage(
   ),
   tabPanel(
     "tab 2",
-    
+    fluidPage(
+      actionButton("go", "Enter password"),
+      textOutput("text")
+    )
   )
   
 )
@@ -126,6 +129,26 @@ server <- function(input, output, session) {
   })
   
   output$data1 <- renderTable(head(iris[selected1(), ], 12))
+  
+  
+  
+  
+  # exercises
+  
+  observeEvent(input$go, {
+    showModal(modalDialog(
+      passwordInput("password", NULL),
+      title = "Please enter your password"
+    ))
+  })
+  
+  output$text <- renderText({
+    if (!isTruthy(input$password)) {
+      "No password"
+    } else {
+      "Password entered"
+    }
+  })
 }
 
 shinyApp(ui, server)
