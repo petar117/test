@@ -1,4 +1,5 @@
 library(shiny)
+library(tidyverse)
 
 make_ui <- function(x, var) {
   if (is.numeric(x)) {
