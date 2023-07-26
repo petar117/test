@@ -130,7 +130,7 @@ server <- function(input, output, session) {
       arrange(mtcars, .data[[input$var3]])
     }
   })
-  output$data3 <- renderTable(sorted() %>% head(7))
+  output$data3 <- renderTable(sorted() %>% head(8))
 }
 
 shinyApp(ui, server)
