@@ -19,9 +19,9 @@ ui <- navbarPage(
   tabPanel(
     "tab 1",
     fluidPage(
-      selectInput("var", "Variable", choices = num_vars),
-      numericInput("min", "Minimum", value = 1),
-      tableOutput("output")
+      selectInput("var4", "Variable", choices = num_vars),
+      numericInput("min4", "Minimum", value = 1),
+      tableOutput("output4")
     ),
     fluidRow(HTML("<hr>")),
     sidebarLayout(
@@ -62,13 +62,25 @@ ui <- navbarPage(
         column(8,
                tableOutput("data3"))
       )
+    ),
+    fluidRow(HTML("<hr>")),
+    fluidPage(
+      fluidRow(
+        column(4,
+               fileInput("data", "dataset", accept = ".tsv"),
+               selectInput("var", "var", character()),
+               numericInput("min", "min", 1, min = 0, step = 1),
+        ),
+        column(8,
+               tableOutput("output"))
+      )
     )
   )
 )
 
 server <- function(input, output, session) {
-  data <- reactive(diamonds %>% filter(.data[[input$var]] > .env$input$min))
-  output$output <- renderTable(head(data()))
+  data4 <- reactive(diamonds %>% filter(.data[[input$var4]] > .env$input$min4))
+  output$output4 <- renderTable(head(data4()))
 
 
 
@@ -131,6 +143,30 @@ server <- function(input, output, session) {
     }
   })
   output$data3 <- renderTable(sorted() %>% head(8))
+  
+  
+  
+  # user uploads data - .tsv file
+  data <- reactive({
+    req(input$data)
+    vroom::vroom(input$data$datapath)
+  })
+  observeEvent(data(), {
+    updateSelectInput(session, "var", choices = names(data()))
+  })
+  observeEvent(input$var, {
+    val <- data()[[input$var]]
+    updateNumericInput(session, "min", value = min(val))
+  })
+  
+  output$output <- renderTable({
+    req(input$var)
+    
+    data() %>% 
+      filter(.data[[input$var]] > .env$input$min) %>% 
+      arrange(.data[[input$var]]) %>% 
+      head(10)
+  })
 }
 
 shinyApp(ui, server)
