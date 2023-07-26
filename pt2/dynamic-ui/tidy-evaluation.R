@@ -199,10 +199,13 @@ server <- function(input, output, session) {
   })
   
   
+  # following code lets the user select any number of grouping variables, 
+  # and any number of variables to summarise with their means.
   output$data6 <- renderTable({
     mtcars %>% 
       group_by(across(all_of(input$vars_g6))) %>% 
-      summarise(across(all_of(input$vars_s6), mean), n = n())
+      summarise(across(all_of(input$vars_s6), mean), n = n()) %>% 
+      head(7)
   })
 }
 
