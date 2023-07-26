@@ -51,6 +51,17 @@ ui <- navbarPage(
         column(8,
                tableOutput("data2"))
       )
+    ),
+    fluidRow(HTML("<hr>")),
+    fluidPage(
+      fluidRow(
+        column(4,
+               selectInput("var3", "Sort by", choices = names(mtcars)),
+               checkboxInput("desc3", "Descending order?"),
+        ),
+        column(8,
+               tableOutput("data3"))
+      )
     )
   )
 )
@@ -109,6 +120,17 @@ server <- function(input, output, session) {
       arrange(.data[[input$sort2]]) %>% 
       head(7)
   })
+  
+  
+  
+  sorted <- reactive({
+    if (input$desc3) {
+      arrange(mtcars, desc(.data[[input$var3]]))
+    } else {
+      arrange(mtcars, .data[[input$var3]])
+    }
+  })
+  output$data3 <- renderTable(sorted() %>% head(7))
 }
 
 shinyApp(ui, server)
