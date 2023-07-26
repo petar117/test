@@ -75,6 +75,20 @@ ui <- navbarPage(
                tableOutput("output"))
       )
     )
+  ),
+  tabPanel(
+    "tab 2",
+    fluidPage(
+      selectInput("vars5", "Variables", names(mtcars), multiple = TRUE),
+      tableOutput("data5"),
+      tableOutput("count5")
+    ),
+    fluidRow(HTML("<hr>")),
+    fluidPage(
+      selectInput("vars_g6", "Group by", names(mtcars), multiple = TRUE),
+      selectInput("vars_s6", "Summarise", names(mtcars), multiple = TRUE),
+      tableOutput("data6")
+    )
   )
 )
 
@@ -166,6 +180,29 @@ server <- function(input, output, session) {
       filter(.data[[input$var]] > .env$input$min) %>% 
       arrange(.data[[input$var]]) %>% 
       head(10)
+  })
+  
+  
+  
+  # tab 2 - tidy-selection
+  output$data5 <- renderTable({
+    req(input$vars5)
+    mtcars %>% select(all_of(input$vars5)) %>% head(5)
+  })
+  
+  output$count5 <- renderTable({
+    req(input$vars5)
+    
+    mtcars %>% 
+      group_by(across(all_of(input$vars5))) %>% 
+      summarise(n = n(), .groups = "drop")
+  })
+  
+  
+  output$data6 <- renderTable({
+    mtcars %>% 
+      group_by(across(all_of(input$vars_g6))) %>% 
+      summarise(across(all_of(input$vars_s6), mean), n = n())
   })
 }
 
