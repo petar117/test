@@ -4,6 +4,10 @@ library(text)
 library(wordcloud2)
 library(tm)
 library(colourpicker)
+library(tidytext)
+library(sentimentr)
+library(textstem)
+library(tidyverse)
 
 ui <- fluidPage(
   h1("Word Cloud"),
@@ -112,38 +116,52 @@ server <- function(input, output) {
   create_wordcloud <- function(data, num_words = 100, background = "white") {
     
     if (is.character(data)) {
-      corpus <- Corpus(VectorSource(data))
-      corpus <- tm_map(corpus, content_transformer(tolower))
-      corpus <- tm_map(corpus, removePunctuation)
-      corpus <- tm_map(corpus, removeNumbers)
-      corpus <- tm_map(corpus, removeWords, stopwords(tolower(input$language)))
-      corpus <- tm_map(corpus, removeWords, c(input$words_to_remove1))
-      corpus <- tm_map(corpus, removeWords, c(input$words_to_remove2))
-      corpus <- tm_map(corpus, removeWords, c(input$words_to_remove3))
-      corpus <- tm_map(corpus, removeWords, c(input$words_to_remove4))
-      corpus <- tm_map(corpus, removeWords, c(input$words_to_remove5))
-      corpus <- tm_map(corpus, removeWords, c(input$words_to_remove6))
-      corpus <- tm_map(corpus, removeWords, c(input$words_to_remove7))
-      corpus <- tm_map(corpus, removeWords, c(input$words_to_remove8))
-      corpus <- tm_map(corpus, removeWords, c(input$words_to_remove9))
-      corpus <- tm_map(corpus, removeWords, c(input$words_to_remove10))
-      tdm <- as.matrix(TermDocumentMatrix(corpus))
-      data <- sort(rowSums(tdm), decreasing = TRUE)
-      data <- data.frame(word = names(data), freq = as.numeric(data))
+      # corpus <- Corpus(VectorSource(data))
+      # corpus <- tm_map(corpus, content_transformer(tolower))
+      # corpus <- tm_map(corpus, removePunctuation)
+      # corpus <- tm_map(corpus, removeNumbers)
+      # corpus <- tm_map(corpus, removeWords, stopwords(tolower(input$language)))
+      # corpus <- tm_map(corpus, removeWords, c(input$words_to_remove1))
+      # corpus <- tm_map(corpus, removeWords, c(input$words_to_remove2))
+      # corpus <- tm_map(corpus, removeWords, c(input$words_to_remove3))
+      # corpus <- tm_map(corpus, removeWords, c(input$words_to_remove4))
+      # corpus <- tm_map(corpus, removeWords, c(input$words_to_remove5))
+      # corpus <- tm_map(corpus, removeWords, c(input$words_to_remove6))
+      # corpus <- tm_map(corpus, removeWords, c(input$words_to_remove7))
+      # corpus <- tm_map(corpus, removeWords, c(input$words_to_remove8))
+      # corpus <- tm_map(corpus, removeWords, c(input$words_to_remove9))
+      # corpus <- tm_map(corpus, removeWords, c(input$words_to_remove10))
+      # tdm <- as.matrix(TermDocumentMatrix(corpus))
+      # data <- sort(rowSums(tdm), decreasing = TRUE)
+      # data <- data.frame(word = names(data), freq = as.numeric(data))
+      cleaned_data <- data %>% 
+        removePunctuation() %>% 
+        removeNumbers()  
+      
+      tibble_data <- tibble(text = cleaned_data) 
+      
+      word_freq <- tibble_data %>% 
+        dplyr::filter(text!="") %>% 
+        unnest_tokens(word, text) %>% 
+        anti_join(stop_words) %>% 
+        mutate(wordl = lemmatize_words(word),
+               words = stem_words(word)) %>% 
+        count(wordl, sort = TRUE)
+      
     }
-    
+   
     # Make sure a proper num_words is provided
     if (!is.numeric(num_words) || num_words < 3) {
       num_words <- 3
     }
     
     # Grab the top n most common words
-    data <- head(data, n = num_words)
-    if (nrow(data) == 0) {
+    word_freq <- head(word_freq, n = num_words)
+    if (nrow(word_freq) == 0) {
       return(NULL)
     }
     
-    wordcloud2(data, backgroundColor = background)
+    wordcloud2(word_freq, backgroundColor = background)
   }
   
   output$cloud <- renderWordcloud2({
