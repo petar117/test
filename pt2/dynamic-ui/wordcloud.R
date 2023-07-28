@@ -2,6 +2,8 @@ library(shiny)
 library(officer)
 library(text)
 library(wordcloud2)
+library(tm)
+library(colourpicker)
 
 ui <- fluidPage(
   h1("Word Cloud"),
