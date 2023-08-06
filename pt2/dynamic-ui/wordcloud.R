@@ -74,6 +74,9 @@ ui <- fluidPage(
                      value = 100, min = 5
         ),
         hr(),
+        textInput("custom_stopwords", "Custom Stopwords (comma-separated):"),        actionButton("add", "add"),
+        actionButton("update_stopwords", "Update Stopwords"),
+        textOutput("names"),
         colourInput("col", "Background color", value = "white"),
         hr(),
         HTML('<p>Report a <a href="https://github.com/AntoineSoetewey/word-cloud/issues">bug</a> or view the <a href="https://github.com/AntoineSoetewey/word-cloud/blob/master/app.R">code</a>. Back to <a href="https://www.antoinesoetewey.com/">www.antoinesoetewey.com</a>.</p>')
@@ -113,6 +116,8 @@ server <- function(input, output) {
     return(data)
   })
   
+  custom_stopwords <- reactiveVal(NULL)
+  
   create_wordcloud <- function(data, num_words = 100, background = "white") {
     
     if (is.character(data)) {
@@ -138,6 +143,20 @@ server <- function(input, output) {
         removePunctuation() %>% 
         removeNumbers()  
       
+      
+      # if (!is.null(custom_stopwords())) {
+      #   cleaned_data <- removeWords(cleaned_data, custom_stopwords())
+      # }
+      # custom_stopwords <- strsplit(input$custom_stopwords, ",\\s*")[[1]]
+      # cleaned_data <- str_replace_all(cleaned_data, paste0("\\b(", paste(custom_stopwords, collapse = "|"), ")\\b"), "")
+      # 
+      # # cleaned_data <- dplyr::anti_join(
+      # #   data.frame(word = unlist(strsplit(cleaned_data, "\\s+")), stringsAsFactors = FALSE),
+      # #   data.frame(word = custom_stopwords, stringsAsFactors = FALSE), by = "word"
+      # # ) 
+      # 
+      
+      
       tibble_data <- tibble(text = cleaned_data) 
       
       word_freq <- tibble_data %>% 
@@ -146,6 +165,10 @@ server <- function(input, output) {
         anti_join(stop_words) %>% 
         mutate(wordl = lemmatize_words(word),
                words = stem_words(word)) %>% 
+        filter(!wordl %in% custom_stopwords()) %>%
+        filter(!word %in% custom_stopwords()) %>%
+        
+        
         count(wordl, sort = TRUE)
       
     }
@@ -163,6 +186,14 @@ server <- function(input, output) {
     
     wordcloud2(word_freq, backgroundColor = background)
   }
+  
+  observeEvent(input$file, {
+    custom_stopwords(NULL)
+  })
+  
+  observeEvent(input$update_stopwords, {
+    custom_stopwords(strsplit(input$custom_stopwords, ",\\s*")[[1]])
+  })
   
   output$cloud <- renderWordcloud2({
     create_wordcloud(data_source(),
