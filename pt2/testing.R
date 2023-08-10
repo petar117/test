@@ -12,13 +12,16 @@ library(shiny)
 
 
 
-doc <- read_docx("pt2/proposal.docx")
+doc <- read_docx("pt2/letter.docx")
 text <- docx_summary(doc)$text
 temp_file <- tempfile(fileext = ".txt")
 writeLines(text, temp_file)
 data <- readLines(temp_file)
 unlink(temp_file)                           # Remove the temporary file
 
+
+pdf_text <- pdftools::pdf_text("pt2/solutions.pdf")
+data <- unlist(strsplit(pdf_text, "\\s+"))
 create_wordcloud <- function(data, num_words = 100, background = "white") {
 
 }

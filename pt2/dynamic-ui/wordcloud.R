@@ -71,10 +71,10 @@ ui <- fluidPage(
         ),
         hr(),
         numericInput("num", "Maximum number of words",
-                     value = 100, min = 5
+          value = 100, min = 5
         ),
         hr(),
-        textInput("custom_stopwords", "Custom Stopwords (comma-separated):"),        actionButton("add", "add"),
+        textInput("custom_stopwords", "Custom Stopwords (comma-separated):"), actionButton("add", "add"),
         actionButton("update_stopwords", "Update Stopwords"),
         textOutput("names"),
         colourInput("col", "Background color", value = "white"),
@@ -96,18 +96,15 @@ server <- function(input, output) {
       if (tolower(tools::file_ext(input$file$name)) == "docx") {
         # If it's a docx file, read the text directly
         doc <- read_docx(input$file$datapath)
-        text <- docx_summary(doc)$text
-        temp_file <- tempfile(fileext = ".txt")
-        writeLines(text, temp_file)
-        data <- readLines(temp_file)
-        unlink(temp_file) # Remove the temporary file
+        data <- docx_summary(doc)$text
       } else if (tolower(tools::file_ext(input$file$name)) == "pdf") {
         # If it's a pdf file, read the text using the pdftools package
         pdf_text <- pdftools::pdf_text(input$file$datapath)
         data <- unlist(strsplit(pdf_text, "\\s+"))
       } else {
         # For other file types (e.g., csv, txt), read as-is
-        data <- readLines(input$file$datapath)
+        text <- readLines(input$file$datapath, warn = FALSE, encoding = "UTF-8", skipNul = TRUE)
+       # data <- paste(text, collapse = "\n")  # Use "\n" for Unix/Linux-style line endings
       }
     } else {
       # Handle the case when no file is selected
@@ -115,11 +112,10 @@ server <- function(input, output) {
     }
     return(data)
   })
-  
+
   custom_stopwords <- reactiveVal(NULL)
-  
+
   create_wordcloud <- function(data, num_words = 100, background = "white") {
-    
     if (is.character(data)) {
       # corpus <- Corpus(VectorSource(data))
       # corpus <- tm_map(corpus, content_transformer(tolower))
@@ -139,66 +135,65 @@ server <- function(input, output) {
       # tdm <- as.matrix(TermDocumentMatrix(corpus))
       # data <- sort(rowSums(tdm), decreasing = TRUE)
       # data <- data.frame(word = names(data), freq = as.numeric(data))
-      cleaned_data <- data %>% 
-        removePunctuation() %>% 
-        removeNumbers()  
-      
-      
+      cleaned_data <- data %>%
+        removePunctuation() %>%
+        removeNumbers()
+
+
       # if (!is.null(custom_stopwords())) {
       #   cleaned_data <- removeWords(cleaned_data, custom_stopwords())
       # }
       # custom_stopwords <- strsplit(input$custom_stopwords, ",\\s*")[[1]]
       # cleaned_data <- str_replace_all(cleaned_data, paste0("\\b(", paste(custom_stopwords, collapse = "|"), ")\\b"), "")
-      # 
+      #
       # # cleaned_data <- dplyr::anti_join(
       # #   data.frame(word = unlist(strsplit(cleaned_data, "\\s+")), stringsAsFactors = FALSE),
       # #   data.frame(word = custom_stopwords, stringsAsFactors = FALSE), by = "word"
-      # # ) 
-      # 
-      
-      
-      tibble_data <- tibble(text = cleaned_data) 
-      
-      word_freq <- tibble_data %>% 
-        dplyr::filter(text!="") %>% 
-        unnest_tokens(word, text) %>% 
-        anti_join(stop_words) %>% 
-        mutate(wordl = lemmatize_words(word),
-               words = stem_words(word)) %>% 
+      # # )
+      #
+
+
+      tibble_data <- tibble(text = cleaned_data)
+
+      word_freq <- tibble_data %>%
+        dplyr::filter(text != "") %>%
+        unnest_tokens(word, text) %>%
+        anti_join(stop_words) %>%
+        mutate(
+          wordl = lemmatize_words(word),
+          words = stem_words(word)
+        ) %>%
         filter(!wordl %in% custom_stopwords()) %>%
         filter(!word %in% custom_stopwords()) %>%
-        
-        
         count(wordl, sort = TRUE)
-      
     }
-   
+
     # Make sure a proper num_words is provided
     if (!is.numeric(num_words) || num_words < 3) {
       num_words <- 3
     }
-    
+
     # Grab the top n most common words
     word_freq <- head(word_freq, n = num_words)
     if (nrow(word_freq) == 0) {
       return(NULL)
     }
-    
+
     wordcloud2(word_freq, backgroundColor = background)
   }
-  
+
   observeEvent(input$file, {
     custom_stopwords(NULL)
   })
-  
+
   observeEvent(input$update_stopwords, {
     custom_stopwords(strsplit(input$custom_stopwords, ",\\s*")[[1]])
   })
-  
+
   output$cloud <- renderWordcloud2({
     create_wordcloud(data_source(),
-                     num_words = input$num,
-                     background = input$col
+      num_words = input$num,
+      background = input$col
     )
   })
 }
